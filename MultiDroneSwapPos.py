@@ -111,19 +111,6 @@ d2GToken = 0
 d3GToken = 0
 d4GToken = 0
 
-d1location = client.simGetObjectPose("Drone1")
-d1x = d1location.position.x_val
-d1y = d1location.position.y_val
-d1z = d1location.position.z_val
-d1gdistance = math.sqrt((d1x - d1goal[0])**2 + (d1y-d1goal[1])**2 + (d1z - d1goal[2])**2)
-    
-d2location = client.simGetObjectPose("Drone2")
-d2x = d2location.position.x_val
-d2y = d2location.position.y_val
-d2z = d2location.position.z_val
-
-d1d2distance = math.sqrt((d1x - d2x)**2 + (d1y-d2y)**2 + (d1z - d2z)**2)
-
 dxi = np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0]])
 x = np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0]])
 
@@ -157,10 +144,8 @@ def create_single_integrator_barrier_certificate(barrier_gain=.1, safety_radius=
         
         idxs_to_normalize = (norms > magnitude_limit)
         dxi[:, idxs_to_normalize] = dxi[:, idxs_to_normalize] * magnitude_limit/norms[idxs_to_normalize]
-        #under this line, codes have been modified to fit in 3d positions
 
         f = -2*np.reshape(dxi, 3*N, order='F')
-        #f = f.astype('float')
 
         result = qp(H, matrix(f), matrix(A), matrix(b))['x']
 
@@ -186,9 +171,9 @@ while(1):
     d4y = d4location.position.y_val
     d4z = d4location.position.z_val
 	
-    # x = [1x, 2x, 3x, 4x]
-    #     [1y, 2y, 3y, 4y]
-    #     [1z, 2z, 3z, 4z]
+    # x = [d1x, d2x, d3x, d4x]
+    #     [d1y, d2y, d3y, d4y]
+    #     [d1z, d2z, d3z, d4z]
     x[0][0] = d1x
     x[1][0] = d1y
     x[2][0] = d1z
@@ -282,9 +267,9 @@ while(1):
     d4x = d4location.position.x_val
     d4y = d4location.position.y_val
     d4z = d4location.position.z_val
-    # x = [1x, 2x, 3x, 4x]
-    #     [1y, 2y, 3y, 4y]
-    #     [1z, 2z, 3z, 4z]
+    # x = [d1x, d2x, d3x, d4x]
+    #     [d1y, d2y, d3y, d4y]
+    #     [d1z, d2z, d3z, d4z]
     x[0][0] = d1x
     x[1][0] = d1y
     x[2][0] = d1z
