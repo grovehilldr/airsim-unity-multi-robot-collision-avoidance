@@ -1,3 +1,5 @@
+#This file controls 4 drones and make them swap positions and move back to their original location
+#
 from re import A
 import airsim
 import cv2
@@ -6,20 +8,12 @@ import os
 import pprint
 import setup_path 
 import tempfile
-#siwon added
 import math
 import random
 from cvxopt import matrix
 from cvxopt.blas import dot
 from cvxopt.solvers import qp, options
 from cvxopt import matrix, sparse
-
-
-# Unused for now, will include later for speed.
-# import quadprog as solver2
-
-
-
 
 
 # Disable output of CVXOPT
