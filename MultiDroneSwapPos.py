@@ -1,5 +1,5 @@
-#This file controls 4 drones and make them swap positions and move back to their original location
-#
+# This file controls 4 drones and make them swap positions and move back to their original location.
+# Modified Safety barrier certificate function originally provided by Georgia Tech.
 from re import A
 import airsim
 import cv2
@@ -15,7 +15,6 @@ from cvxopt.blas import dot
 from cvxopt.solvers import qp, options
 from cvxopt import matrix, sparse
 
-
 # Disable output of CVXOPT
 options['show_progress'] = False
 # Change default options of CVXOPT for faster solving
@@ -23,8 +22,7 @@ options['reltol'] = 1e-2 # was e-2
 options['feastol'] = 1e-2 # was e-4
 options['maxiters'] = 50 # default is 100
 
-
-# Use below in settings.json with Blocks environment
+# Copy and paste this to your settings.json file in \Documents\AirSim
 """
 {
 	"SeeDocsAt": "https://github.com/Microsoft/AirSim/blob/main/docs/settings.md",
@@ -38,6 +36,14 @@ options['maxiters'] = 50 # default is 100
 		  "X": -5, "Y": 0, "Z": -2
 		},
 		"Drone2": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 0, "Y": 0, "Z": -2
+		},
+		"Drone3": {
+		  "VehicleType": "SimpleFlight",
+		  "X": 5, "Y": 0, "Z": -2
+		},
+		"Drone4": {
 		  "VehicleType": "SimpleFlight",
 		  "X": 10, "Y": 0, "Z": -2
 		}
@@ -63,6 +69,8 @@ f1 = client.takeoffAsync(vehicle_name="Drone1")
 f2 = client.takeoffAsync(vehicle_name="Drone2")
 f3 = client.takeoffAsync(vehicle_name="Drone3")
 f4 = client.takeoffAsync(vehicle_name="Drone4")
+
+# wait until the drone have taken off
 f1.join()
 f2.join()
 f3.join()
@@ -81,20 +89,18 @@ state4 = client.getMultirotorState(vehicle_name="Drone4")
 s = pprint.pformat(state4)
 print("state: %s" % s)
 
-#setting starting points for Drone 1 and Drone 2
 airsim.wait_key('Press any key to move vehicles')
 f1 = client.moveToPositionAsync(0, -10, -8, 5, vehicle_name="Drone1")
 f2 = client.moveToPositionAsync(0, 7, -8, 5, vehicle_name="Drone2")
 f3 = client.moveToPositionAsync(10, 7, -8, 5, vehicle_name="Drone3")
 f4 = client.moveToPositionAsync(10, -10, -8, 5, vehicle_name="Drone4")
-#wait until they have moved
+
+# wait until the drone have moved to their starting points
 f1.join()
 f2.join()
 f3.join()
 f4.join()
 
-
-#Drone1's goal point
 d1goal = [10,7,-8]
 d2goal = [10,-10,-8]
 d3goal = [0,-10,-8]
@@ -109,17 +115,12 @@ d1location = client.simGetObjectPose("Drone1")
 d1x = d1location.position.x_val
 d1y = d1location.position.y_val
 d1z = d1location.position.z_val
-
-d1current = [d1x, d1y, d1z]
-
 d1gdistance = math.sqrt((d1x - d1goal[0])**2 + (d1y-d1goal[1])**2 + (d1z - d1goal[2])**2)
     
-
 d2location = client.simGetObjectPose("Drone2")
 d2x = d2location.position.x_val
 d2y = d2location.position.y_val
 d2z = d2location.position.z_val
-
 
 d1d2distance = math.sqrt((d1x - d2x)**2 + (d1y-d2y)**2 + (d1z - d2z)**2)
 
@@ -167,8 +168,6 @@ def create_single_integrator_barrier_certificate(barrier_gain=.1, safety_radius=
 
     return f
 
-
-#si_barrier_cert = create_single_integrator_barrier_certificate()
 while(1):
     d1location = client.simGetObjectPose("Drone1")
     d1x = d1location.position.x_val
@@ -186,6 +185,7 @@ while(1):
     d4x = d4location.position.x_val
     d4y = d4location.position.y_val
     d4z = d4location.position.z_val
+	
     # x = [1x, 2x, 3x, 4x]
     #     [1y, 2y, 3y, 4y]
     #     [1z, 2z, 3z, 4z]
@@ -226,10 +226,6 @@ while(1):
     si_barrier_cert = create_single_integrator_barrier_certificate()
     dxi = si_barrier_cert(dxi,x)
     
-    
-#    client.moveToPositionAsync(dxi[0][0], dxi[1][0], dxi[2][0], 4, vehicle_name="Drone1")
-#    client.moveToPositionAsync(dxi[0][1], dxi[1][1], dxi[2][1], 4, vehicle_name="Drone2")
-    
     client.moveByVelocityAsync(dxi[0][0], dxi[1][0], dxi[2][0], 0.1, vehicle_name="Drone1")
     client.moveByVelocityAsync(dxi[0][1], dxi[1][1], dxi[2][1], 0.1, vehicle_name="Drone2")
     client.moveByVelocityAsync(dxi[0][2], dxi[1][2], dxi[2][2], 0.1, vehicle_name="Drone3")
@@ -239,13 +235,6 @@ while(1):
     d3gdistance = math.sqrt((d3x - d3goal[0])**2 + (d3y-d3goal[1])**2 + (d3z - d3goal[2])**2)
     d4gdistance = math.sqrt((d4x - d4goal[0])**2 + (d4y-d4goal[1])**2 + (d4z - d4goal[2])**2)
     
-  
-
-    
-   
-
-
-
     if (d1gdistance < 1.5):
         if (d1GToken != 1):
             print("Drone 1 reached very close to the goal")
@@ -366,28 +355,7 @@ while(1):
             
     if(d1GToken == 2 and d2GToken == 2 and d3GToken == 2 and d4GToken == 2):
         print("all drones are at the goal")
-        break
-        
-        
-    
-
-
-
-        
-        
-        
-        
-    #else:
-     #   client.moveToPositionAsync( (d1goal[0]), (d1goal[1]), (d1goal[2]), 3, vehicle_name="Drone1")
-      #  print("step")
-
-
-
-
-
-
-
-
+        break            
 
 airsim.wait_key('Press any key to reset to original state')
 
