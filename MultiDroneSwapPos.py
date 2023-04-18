@@ -137,12 +137,12 @@ def create_single_integrator_barrier_certificate(barrier_gain=.1, safety_radius=
         A = np.zeros((num_constraints, 3*N))
         b = np.zeros(num_constraints)
         H = sparse(matrix(2*np.identity(3*N)))
-        param = 2
+
         count = 0
         for i in range(N-1):
             for j in range(i+1, N):
                 error = x[:, i] - x[:, j]
-                h = (error[0]*error[0] + error[1]*error[1] +(error[2]/param)*(error[2]/param)) - np.power(safety_radius, 2)
+                h = (error[0]*error[0] + error[1]*error[1] + error[2]*error[2]) - np.power(safety_radius, 2)
 
                 A[count, (2*i, (2*i+1), (2*i+2))] = -2*error
                 A[count, (2*j+1, (2*j+2), (2*j+3))] = 2*error
