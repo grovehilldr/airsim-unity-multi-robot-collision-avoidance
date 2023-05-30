@@ -163,8 +163,8 @@ def create_single_integrator_barrier_certificate(barrier_gain=.1, safety_radius=
         # Initialize some variables for computational savings
         N = dxi.shape[1]
         num_constraints = int(comb(N, 2))
-        A = np.zeros((num_constraints+2, 3*N))
-        b = np.zeros(num_constraints+2)
+        A = np.zeros((num_constraints+8, 3*N))
+        b = np.zeros(num_constraints+8)
         H = sparse(matrix(2*np.identity(3*N)))
 
         count = 0
@@ -179,14 +179,14 @@ def create_single_integrator_barrier_certificate(barrier_gain=.1, safety_radius=
 
                 count += 1
 
-        zVec1 = (-9 - d1z)
-        zVec2 = (-9 - d2z)
-        zVec3 = (-9 - d3z)
-        zVec4 = (-9 - d4z)
-        zVec1n = -(-3 - d1z)
-        zVec2n = -(-3 - d2z)
-        zVec3n = -(-3 - d3z)
-        zVec4n = -(-3 - d4z)
+        zVec1 = -(-9 - d1z)
+        zVec2 = -(-9 - d2z)
+        zVec3 = -(-9 - d3z)
+        zVec4 = -(-9 - d4z)
+        zVec1n = (-3 - d1z)
+        zVec2n = (-3 - d2z)
+        zVec3n = (-3 - d3z)
+        zVec4n = (-3 - d4z)
         A[num_constraints] = [0,0,zVec1,0,0,0,0,0,0,0,0,0]
         b[num_constraints] = -9
         A[num_constraints+1] = [0,0,zVec1n,0,0,0,0,0,0,0,0,0]
@@ -197,15 +197,15 @@ def create_single_integrator_barrier_certificate(barrier_gain=.1, safety_radius=
         A[num_constraints+3] = [0,0,0,0,0,zVec2n,0,0,0,0,0,0]
         b[num_constraints+3] = -3
 
-        A[num_constraints+2] = [0,0,0,0,0,0,0,0,zVec3,0,0,0]
-        b[num_constraints+2] = -9
-        A[num_constraints+3] = [0,0,0,0,0,0,0,0,zVec3n,0,0,0]
-        b[num_constraints+3] = -3
+        A[num_constraints+4] = [0,0,0,0,0,0,0,0,zVec3,0,0,0]
+        b[num_constraints+4] = -9
+        A[num_constraints+5] = [0,0,0,0,0,0,0,0,zVec3n,0,0,0]
+        b[num_constraints+5] = -3
 
-        A[num_constraints+2] = [0,0,0,0,0,0,0,0,0,0,0,zVec4]
-        b[num_constraints+2] = -9
-        A[num_constraints+3] = [0,0,0,0,0,0,0,0,0,0,0,zVec4n]
-        b[num_constraints+3] = -3
+        A[num_constraints+6] = [0,0,0,0,0,0,0,0,0,0,0,zVec4]
+        b[num_constraints+6] = -9
+        A[num_constraints+7] = [0,0,0,0,0,0,0,0,0,0,0,zVec4n]
+        b[num_constraints+7] = -3
 
 
 
@@ -372,3 +372,5 @@ client.enableApiControl(False, "Drone1")
 client.enableApiControl(False, "Drone2")
 client.enableApiControl(False, "Drone3")
 client.enableApiControl(False, "Drone4")
+
+
