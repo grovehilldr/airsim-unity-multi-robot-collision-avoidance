@@ -1,3 +1,17 @@
+from cvxopt import matrix
+from cvxopt.blas import dot
+from cvxopt.solvers import qp, options
+from cvxopt import matrix, sparse
+
+from scipy.special import comb
+from rps.utilities.transformations import *
+
+# Disable output of CVXOPT
+options['show_progress'] = False
+# Change default options of CVXOPT for faster solving
+options['reltol'] = 1e-2 # was e-2
+options['feastol'] = 1e-2 # was e-4
+options['maxiters'] = 50 # default is 100
 def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.1, magnitude_limit = 0.2,Confidence = 1):
     assert isinstance(gamma, (int,
                               float)), "In the function create_single_integrator_barrier_certificate, the barrier gain (gamma) must be an integer or float. Recieved type %r." % type(
