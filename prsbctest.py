@@ -33,6 +33,7 @@ options['show_progress'] = False
 options['reltol'] = 1e-2 # was e-2
 options['feastol'] = 1e-2 # was e-4
 options['maxiters'] = 50 # default is 100
+
 def trap_cdf_inv(a, c, delta, sigma):
     # returns list of b2, b1, sigma
     b2 = delta
@@ -92,41 +93,24 @@ def trap_cdf_inv(a, c, delta, sigma):
             print('first triangle, which is not allowed as long as we assume sigma > 50%')
 
     return b2, b1, sigma
-def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.1, magnitude_limit = 0.2,Confidence = 1):
-    assert isinstance(gamma, (int,
-                              float)), "In the function create_single_integrator_barrier_certificate, the barrier gain (gamma) must be an integer or float. Recieved type %r." % type(
-        gamma).__name__
-    assert isinstance(safety_radius, (int,
-                                      float)), "In the function create_single_integrator_barrier_certificate, the safe distance between robots (safety_radius) must be an integer or float. Recieved type %r." % type(
-        safety_radius).__name__
-    assert isinstance(magnitude_limit, (int,
-                                        float)), "In the function create_single_integrator_barrier_certificate, the maximum linear velocity of the robot (magnitude_limit) must be an integer or float. Recieved type %r." % type(
-        magnitude_limit).__name__
+dxi = np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0]])
 
-    # Check user input ranges/sizes
-    assert gamma > 0, "In the function create_single_integrator_barrier_certificate, the barrier gain (gamma) must be positive. Recieved %r." % gamma
-    assert safety_radius >= 0.12, "In the function create_single_integrator_barrier_certificate, the safe distance between robots (safety_radius) must be greater than or equal to the diameter of the robot (0.12m) plus the distance to the look ahead point used in the diffeomorphism if that is being used. Recieved %r." % safety_radius
-    assert magnitude_limit > 0, "In the function create_single_integrator_barrier_certificate, the maximum linear velocity of the robot (magnitude_limit) must be positive. Recieved %r." % magnitude_limit
-    assert magnitude_limit <= 0.2, "In the function create_single_integrator_barrier_certificate, the maximum linear velocity of the robot (magnitude_limit) must be less than the max speed of the robot (0.2m/s). Recieved %r." % magnitude_limit
+x = np.array([[0,0,0,0],[0,0,0,0],[-2,-4,-6,-8]])
+N = dxi.shape[1]
+#v_rand_span = 0.005 * np.ones((2, N)) # setting up velocity error range for each robot
+URandSpan = 0.005 * np.ones((2, N))
 
-    def barrier_certificate(dxi, x, XRandSpan, URandSpan):
-        assert isinstance(dxi,
-                          np.ndarray), "In the function created by the create_single_integrator_barrier_certificate function, the single-integrator robot velocity command (dxi) must be a numpy array. Recieved type %r." % type(
-            dxi).__name__
-        assert isinstance(x,
-                          np.ndarray), "In the function created by the create_single_integrator_barrier_certificate function, the robot states (x) must be a numpy array. Recieved type %r." % type(
-            x).__name__
+x_rand_span_x = 0.02 * np.random.randint(3, 4, (1, N)) # setting up position error range for each robot,
+x_rand_span_y = 0.02 * np.random.randint(1, 4, (1, N)) # rand_span serves as the upper bound of uncertainty for each of the robot
 
-        # Check user input ranges/sizes
-        assert x.shape[
-                   0] == 2, "In the function created by the create_single_integrator_barrier_certificate function, the dimension of the single integrator robot states (x) must be 2 ([x;y]). Recieved dimension %r." % \
-                            x.shape[0]
-        assert dxi.shape[
-                   0] == 2, "In the function created by the create_single_integrator_barrier_certificate function, the dimension of the robot single integrator velocity command (dxi) must be 2 ([x_dot;y_dot]). Recieved dimension %r." % \
-                            dxi.shape[0]
-        assert x.shape[1] == dxi.shape[
-            1], "In the function created by the create_single_integrator_barrier_certificate function, the number of robot states (x) must be equal to the number of robot single integrator velocity commands (dxi). Recieved a current robot pose input array (x) of size %r x %r and single integrator velocity array (dxi) of size %r x %r." % (
-            x.shape[0], x.shape[1], dxi.shape[0], dxi.shape[1])
+#x_rand_span_xy = np.concatenate((x_rand_span_x, x_rand_span_y))
+XRandSpan = np.concatenate((x_rand_span_x, x_rand_span_y))
+def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.2, magnitude_limit = 0.2,Confidence = 0.9):
+
+    def barrier_certificate(dxi, x):
+ 
+
+        
         N = dxi.shape[1]
         num_constraints = int(comb(N, 2))
         A = np.zeros((num_constraints, 2 * N))
@@ -186,27 +170,18 @@ def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.
         # Threshold control inputs before QP
         norms = np.linalg.norm(dxi, 2, 0)
         idxs_to_normalize = (norms > magnitude_limit)
-        dxi[:, idxs_to_normalize] *= magnitude_limit / norms[idxs_to_normalize]
+        dxi[:, idxs_to_normalize] =dxi[:, idxs_to_normalize] * (magnitude_limit / norms[idxs_to_normalize])
 
         f_mat = -2 * np.reshape(dxi, 2 * N, order='F')
         result = qp(H, matrix(f_mat), matrix(A), matrix(b))['x']
 
         return np.reshape(result, (2, -1), order='F')
-
+    return barrier_certificate
 
 # Unused for now, will include later for speed.
 # import quadprog as solver2
 
 
-
-
-
-# Disable output of CVXOPT
-options['show_progress'] = False
-# Change default options of CVXOPT for faster solving
-options['reltol'] = 1e-5 # was e-2
-options['feastol'] = 1e-5 # was e-4
-options['maxiters'] = 150 # default is 100
 
 
 # Use below in settings.json with Blocks environment
@@ -292,105 +267,11 @@ N = dxi.shape[1]
 dgoal = np.array([ [0,1,1,1], [25,1,1,1] , [-5,1,1,1] ])
 
 
-def create_single_integrator_barrier_certificate(barrier_gain=30, safety_radius=1.5, magnitude_limit=.5,boundary_points = np.array([-30,30,-30,30,-8.6,0])):
 
-
-    def f(dxi, x):
-   
-        # Initialize some variables for computational savings
-        N = dxi.shape[1]
-        num_constraints = 3+2
-        A = np.zeros((num_constraints, 3*N))
-        b = np.zeros(num_constraints)
-        H = sparse(matrix(2*np.identity(3*N)))
-
-        count = 0
-        for i in range(1):      #drone num #fix when changed
-            for j in range(i+1, N):
-                error = x[:, i] - x[:, j]
-                h = (error[0]*error[0] + error[1]*error[1] +error[2]*error[2]) - np.power(safety_radius, 2) #fix when changed
-
-                A[count, (3*i, (3*i+1), (3*i+2))] = -2*error
-                #A[count, (3*j, (3*j+1), (3*j+2))] = 2*error
-                b[count] = barrier_gain*np.power(h, 3)
-
-                count += 1
-        
-
-        for k in range(1):
-            
-
-            #Pos z
-            #tmp = k-1
-            A[count, (3*k,3*k+1, 3*k+2)] = np.array([0,0,1])
-            b[count] = 0.4*barrier_gain*(boundary_points[5] - safety_radius/2 - x[2,k])**3;
-            count += 1
-
-            #Neg z
-            A[count, (3*k,3*k+1, 3*k+2)] = -np.array([0,0,1])
-            b[count] = 0.4*barrier_gain*(-boundary_points[4] - safety_radius/2 + x[2,k])**3;
-            count += 1
-
-
-        norms = np.linalg.norm(dxi, 2, 0)
-        
-        idxs_to_normalize = (norms > magnitude_limit)
-        dxi[:, idxs_to_normalize] = dxi[:, idxs_to_normalize] * magnitude_limit/norms[idxs_to_normalize]
-
-        f = -2*np.reshape(dxi, 3*N, order='F')
-        f = f.astype('float')
-
-        result = qp(H, matrix(f), matrix(A), matrix(b))['x']
-        
-
-
-        return np.reshape(result, (3, -1), order='F')
-
-    return f
-kfcount = 0
-dt = 0
-A = np.array([[1,0,0],[0,1,0],[0,0,1]])
-
-H = np.array([[1,0,0],[0,1,0],[0,0,1]])
-Q = np.array([[0.01,0,0],[0,0.01,0],[0,0,0.01]])
-R = np.array([[0.01,0,0],[0,0.01,0],[0,0,0.01]])
-u_esti =  np.array([ [dxi[0][0]],[dxi[1][0]],[dxi[2][0]] ])
-
-rx = np.array([[0],[0],[0]])
-
-if(kfcount == 0):
-    P = np.array([[0.1, 0, 0],[0, 0.1,0],[0, 0, 0.1]])
-    x_esti = np.array([ [x[0][0]],[x[1][0]],[x[2][0]] ])
-    z_meas = np.array([ ([rx[0][0]]),([rx[0][0]]),([rx[0][0]]) ])
-def kalman_filter(z_meas, x_esti, P):
-    """Kalman Filter Algorithm."""
-    # (1) Prediction.
-    
-    x_pred = A @ x_esti + dt*u_esti
-    P_pred = A @ P @ A.T + Q
- 
-    # (2) Kalman Gain.
-    K = P_pred @ H.T @ np.linalg.inv(H @ P_pred @ H.T + R)
- 
-    # (3) Estimation.
-    x_esti = x_pred + K @ (z_meas - H @ x_pred)
- 
-    # (4) Error Covariance.
-    P = P_pred - K @ H @ P_pred
- 
-    return x_esti, P
-
-
-
-v_rand_span = 0.005 * np.ones((2, N)) # setting up velocity error range for each robot
-
-x_rand_span_x = 0.02 * np.random.randint(3, 4, (1, N)) # setting up position error range for each robot,
-x_rand_span_y = 0.02 * np.random.randint(1, 4, (1, N)) # rand_span serves as the upper bound of uncertainty for each of the robot
-
-x_rand_span_xy = np.concatenate((x_rand_span_x, x_rand_span_y))
 #si_barrier_cert = create_single_integrator_barrier_certificate()
 safety_radius = 0.20
 confidence_level = 0.90
+si_barrier_cert = create_si_pr_barrier_certificate_centralized()
 while(1):
     start_time = time.time()
     d1location = client.simGetObjectPose("Drone1")
@@ -402,10 +283,7 @@ while(1):
     x[0][0] = d1x
     x[1][0] = d1y
     x[2][0] = d1z
-    rx[0][0] = x[0][0] +0.015
-    rx[1][0] = x[1][0]+0.015
-    rx[2][0] = x[2][0]-0.015
-    z_meas = np.array([ ([rx[0][0]]),([rx[0][0]]),([rx[0][0]]) ])
+
 
 
     dxi[0][0] = dgoal[0][0] - x[0][0]
@@ -413,24 +291,22 @@ while(1):
     dxi[2][0] = dgoal[2][0] - x[2][0]
     dxi/5
     #si_barrier_cert = create_single_integrator_barrier_certificate()
-    si_barrier_cert = create_si_pr_barrier_certificate_centralized(safety_radius=safety_radius, Confidence=confidence_level)
+    #si_barrier_cert = create_si_pr_barrier_certificate_centralized()
     dxi[0][0] = dgoal[0][0] - x[0][0]
     dxi[1][0] = dgoal[1][0] - x[1][0]
     dxi[2][0] = dgoal[2][0] - x[2][0]
-    dxi_r = si_barrier_cert(dxi,x,x_rand_span_xy,v_rand_span)
+    dxi_r = si_barrier_cert(dxi,x)
     
 #    client.moveToPositionAsync(dxi[0][0], dxi[1][0], dxi[2][0], 4, vehicle_name="Drone1")
 #    client.moveToPositionAsync(dxi[0][1], dxi[1][1], dxi[2][1], 4, vehicle_name="Drone2")
     
     client.moveByVelocityAsync(dxi[0][0], dxi[1][0], dxi[2][0], 1, vehicle_name="Drone1")
-    end_time = time.time()
-    dt = end_time - start_time
+
     #client.moveByVelocityAsync(dxi[0][1], dxi[1][1], dxi[2][1], 0.1, vehicle_name="Drone2")
     #client.moveByVelocityAsync(dxi[0][2], dxi[1][2], dxi[2][2], 0.1, vehicle_name="Drone3")
     #client.moveByVelocityAsync(dxi[0][3], dxi[1][3], dxi[2][3], 0.1, vehicle_name="Drone4")
 
-    kalman_filter(z_meas, x_esti, P)
-    print("x error", d1x - x_esti[0])
+ 
 
     d1gdistance = math.sqrt((d1x - dgoal[0][0])**2 + (d1y-dgoal[1][0])**2 + (d1z - dgoal[2][0])**2)
 
@@ -476,4 +352,3 @@ client.reset()
 
 # that's enough fun for now. let's quit cleanly
 client.enableApiControl(False, "Drone1")
-
