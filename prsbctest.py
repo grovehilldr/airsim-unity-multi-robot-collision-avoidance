@@ -180,7 +180,7 @@ def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.
         dxi[:, idxs_to_normalize] =dxi[:, idxs_to_normalize] * (magnitude_limit / norms[idxs_to_normalize])
 
         f_mat = -2 * np.reshape(dxi, 2 * N, order='F')
-        
+        f_mat = f_mat.astype('float')
         result = qp(H, matrix(f_mat), matrix(A), matrix(b))['x']
 
         return np.reshape(result, (2, -1), order='F')
