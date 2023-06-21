@@ -93,31 +93,38 @@ def trap_cdf_inv(a, c, delta, sigma):
             print('first triangle, which is not allowed as long as we assume sigma > 50%')
 
     return b2, b1, sigma
-dxi = np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0]])
+dxi = np.array([[0,0,0,0],[0,0,0,0]])
 
-x = np.array([[0,0,0,0],[0,0,0,0],[-2,-4,-6,-8]])
+x = np.array([[0,0,0,0],[-2,-4,-6,-8]])
 N = dxi.shape[1]
-#v_rand_span = 0.005 * np.ones((2, N)) # setting up velocity error range for each robot
-URandSpan = 0.005 * np.ones((2, N))
+v_rand_span = 0.005 * np.ones((2, N)) # setting up velocity error range for each robot
+
 
 x_rand_span_x = 0.02 * np.random.randint(3, 4, (1, N)) # setting up position error range for each robot,
 x_rand_span_y = 0.02 * np.random.randint(1, 4, (1, N)) # rand_span serves as the upper bound of uncertainty for each of the robot
 
-#x_rand_span_xy = np.concatenate((x_rand_span_x, x_rand_span_y))
-XRandSpan = np.concatenate((x_rand_span_x, x_rand_span_y))
-def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.2, magnitude_limit = 0.2,Confidence = 0.9):
+x_rand_span_xy = np.concatenate((x_rand_span_x, x_rand_span_y))
 
-    def barrier_certificate(dxi, x):
+def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.2, magnitude_limit = 0.2,Confidence = 0.9,XRandSpan=None, URandSpan=None):
+    if URandSpan is None:
+        URandSpan = [0]
+    if XRandSpan is None:
+        XRandSpan = [0]
+    def barrier_certificate(dxi, x,XRandSpan, URandSpan):
  
 
         
-        N = dxi.shape[1]
+        #N = dxi.shape[1]
         num_constraints = int(comb(N, 2))
         A = np.zeros((num_constraints, 2 * N))
         b = np.zeros(num_constraints)
         H = sparse(matrix(2 * np.identity(2 * N)))
 
         count = 0
+        if len(XRandSpan) == 1:
+            XRandSpan = np.zeros(2, N)
+        if len(URandSpan) == 1:
+            URandSpan = np.zeros(2, N)
         for i in range(N - 1):
             for j in range(i + 1, N):
 
@@ -173,6 +180,7 @@ def create_si_pr_barrier_certificate_centralized(gamma = 1e4, safety_radius = 0.
         dxi[:, idxs_to_normalize] =dxi[:, idxs_to_normalize] * (magnitude_limit / norms[idxs_to_normalize])
 
         f_mat = -2 * np.reshape(dxi, 2 * N, order='F')
+        
         result = qp(H, matrix(f_mat), matrix(A), matrix(b))['x']
 
         return np.reshape(result, (2, -1), order='F')
@@ -256,15 +264,15 @@ d1x = d1location.position.x_val
 d1y = d1location.position.y_val
 d1z = d1location.position.z_val
 
-dxi = np.array([[0,0,0,0],[0,0,0,0],[0,0,0,0]])
+dxi = np.array([[0,0,0,0],[0,0,0,0]])
 
-x = np.array([[0,0,0,0],[0,0,0,0],[-2,-4,-6,-8]])
+x = np.array([[0,0,0,0],[-2,-4,-6,-8]])
 N = dxi.shape[1]
 
 
 
 
-dgoal = np.array([ [0,1,1,1], [25,1,1,1] , [-5,1,1,1] ])
+dgoal = np.array([ [0,1,1,1], [25,1,1,1] ])
 
 
 
@@ -282,25 +290,23 @@ while(1):
 
     x[0][0] = d1x
     x[1][0] = d1y
-    x[2][0] = d1z
+ 
 
 
 
     dxi[0][0] = dgoal[0][0] - x[0][0]
     dxi[1][0] = dgoal[1][0] - x[1][0]
-    dxi[2][0] = dgoal[2][0] - x[2][0]
+  
     dxi/5
     #si_barrier_cert = create_single_integrator_barrier_certificate()
     #si_barrier_cert = create_si_pr_barrier_certificate_centralized()
-    dxi[0][0] = dgoal[0][0] - x[0][0]
-    dxi[1][0] = dgoal[1][0] - x[1][0]
-    dxi[2][0] = dgoal[2][0] - x[2][0]
-    dxi_r = si_barrier_cert(dxi,x)
+
+    dxi = si_barrier_cert(dxi,x,x_rand_span_xy,v_rand_span)
     
 #    client.moveToPositionAsync(dxi[0][0], dxi[1][0], dxi[2][0], 4, vehicle_name="Drone1")
 #    client.moveToPositionAsync(dxi[0][1], dxi[1][1], dxi[2][1], 4, vehicle_name="Drone2")
     
-    client.moveByVelocityAsync(dxi[0][0], dxi[1][0], dxi[2][0], 1, vehicle_name="Drone1")
+    client.moveByVelocityAsync(dxi[0][0], dxi[1][0], 0, 1, vehicle_name="Drone1")
 
     #client.moveByVelocityAsync(dxi[0][1], dxi[1][1], dxi[2][1], 0.1, vehicle_name="Drone2")
     #client.moveByVelocityAsync(dxi[0][2], dxi[1][2], dxi[2][2], 0.1, vehicle_name="Drone3")
@@ -308,7 +314,7 @@ while(1):
 
  
 
-    d1gdistance = math.sqrt((d1x - dgoal[0][0])**2 + (d1y-dgoal[1][0])**2 + (d1z - dgoal[2][0])**2)
+    d1gdistance = math.sqrt((d1x - dgoal[0][0])**2 + (d1y-dgoal[1][0])**2 )
 
     if (d1gdistance < 1.5):
         if (d1GToken != 1):
