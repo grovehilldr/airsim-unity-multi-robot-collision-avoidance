@@ -1,3 +1,4 @@
+#DOES NOT WORK PROPERLY DUE TO DEADLOCKS
 from re import A
 import airsim
 import cv2
