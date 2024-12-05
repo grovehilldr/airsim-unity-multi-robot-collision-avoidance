@@ -1,4 +1,4 @@
-# AirSim-SafeControl-Research
+# AirSim-Drone-Racing-Simulation
 
 Check https://microsoft.github.io/AirSim/ to set up the basic environment
 
