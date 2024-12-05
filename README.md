@@ -1,4 +1,4 @@
-# AirSim-Drone-Racing-Simulation
+# Drone Racing Simulation with Collision Avoidance using CBFs
 
 Check https://microsoft.github.io/AirSim/ to set up the basic environment
 
